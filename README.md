@@ -34,6 +34,45 @@ docker run --rm -i \
   mcp-fast-note-sync-service:latest
 ```
 
+Docker Hub 멀티아키 수동 푸시(선택):
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t <dockerhub-user>/mcp-fast-note-sync-service:v0.1.0 \
+  -t <dockerhub-user>/mcp-fast-note-sync-service:latest \
+  --push .
+```
+
+## 3) GitHub Release + Docker Hub 자동 배포
+
+`.github/workflows/release.yml`이 `v*` 태그 푸시 시 아래를 자동 수행합니다.
+
+- `npm ci && npm run check`
+- Docker 멀티아키 이미지(`linux/amd64`, `linux/arm64`) 빌드/푸시
+- GitHub Release 생성(자동 릴리즈 노트)
+
+필수 GitHub 설정:
+
+- Repository Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`
+- Repository Variables(선택): `DOCKERHUB_IMAGE_NAME` (기본값: `mcp-fast-note-sync-service`)
+
+릴리즈 방법:
+
+```bash
+# 예: patch 버전 릴리즈
+npm version patch
+git push origin main
+git push origin --tags
+```
+
+또는 태그를 수동으로 만들 수도 있습니다.
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
 ## Testing / Lint / Format
 
 ```bash
@@ -44,7 +83,7 @@ npm run format      # biome check --write
 npm run check       # typecheck + lint + test:run
 ```
 
-## 3) MCP 클라이언트 설정 예시
+## 4) MCP 클라이언트 설정 예시
 
 `command`로 Docker를 직접 실행하는 방식:
 
@@ -66,7 +105,7 @@ npm run check       # typecheck + lint + test:run
 }
 ```
 
-## 4) 환경변수
+## 5) 환경변수
 
 - `FNS_BASE_URL` (기본: `http://fast-note-sync-service:9000`)
 - `FNS_TOKEN` 사용자 토큰 (권장)
@@ -78,13 +117,13 @@ npm run check       # typecheck + lint + test:run
 - `FNS_ENABLE_ADMIN_TOOLS` (`true/false`, 기본 `false`)
 - `FNS_PRETTY_DEFAULT` (`true/false`, 기본 `false`)
 
-## 5) Vault 선택 방식
+## 6) Vault 선택 방식
 
 - `fns_vault_set_active`로 active vault 선택
 - vault 필수 도구에서 `vault` 생략 시 `active -> default` 순으로 적용
 - `FNS_ALLOWED_VAULTS` 제약을 항상 검사
 
-## 6) 제공 툴
+## 7) 제공 툴
 
 ### 런타임/보조
 - `fns_server_config`
@@ -119,7 +158,7 @@ npm run check       # typecheck + lint + test:run
 - `fns_share_create`, `fns_share_get_note`, `fns_share_get_file`
 - `fns_admin_*` (`FNS_ENABLE_ADMIN_TOOLS=true`일 때만 노출)
 
-## 7) 현재 매핑 한계
+## 8) 현재 매핑 한계
 
 - `file move/rename`는 현재 REST 라우트가 없어 전용 툴로 직접 매핑하지 않았습니다.
   - 서비스/WS에는 존재하지만 REST 엔드포인트는 미노출 상태입니다.

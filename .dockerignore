@@ -1,5 +1,11 @@
 node_modules
+dist
+coverage
 npm-debug.log*
 .git
 .gitignore
+.github
+tests
+.env
+.DS_Store
 *.log
