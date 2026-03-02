@@ -11,6 +11,8 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
+    "start:streamable-http": "MCP_TRANSPORT=streamable-http node dist/index.js",
+    "start:sse": "MCP_TRANSPORT=sse node dist/index.js",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm run test:run",
     "test": "vitest",
