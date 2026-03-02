@@ -87,6 +87,35 @@ npm run check       # typecheck + lint + test:run
 
 `command`로 Docker를 직접 실행하는 방식:
 
+### A. Docker Hub 릴리즈 이미지 사용(권장)
+
+최신 배포본을 바로 연동할 때 사용합니다. `latest`보다 `vX.Y.Z` 고정 태그를 권장합니다.
+
+```json
+{
+  "mcpServers": {
+    "fast-note-sync": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "--pull", "always",
+        "--network", "your_network",
+        "-e", "FNS_BASE_URL=http://fast-note-sync-service:9000",
+        "-e", "FNS_TOKEN=your_token",
+        "-e", "FNS_ALLOWED_VAULTS=*",
+        "oakkim/mcp-fast-note-sync-service:v0.1.1"
+      ]
+    }
+  }
+}
+```
+
+`fast-note-sync-service`가 호스트에서 직접 실행 중이면 `FNS_BASE_URL`을 `http://host.docker.internal:9000`으로 지정하면 됩니다.
+
+### B. 로컬 빌드 이미지 사용
+
+직접 빌드한 이미지를 사용할 때는 아래처럼 이미지 이름만 바꿔서 사용합니다.
+
 ```json
 {
   "mcpServers": {
