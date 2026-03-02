@@ -168,6 +168,11 @@ Server modes:
 - `MCP_TRANSPORT=streamable-http` (recommended): single endpoint at `<basePath>` (`GET`/`POST`/`DELETE`)
 - `MCP_TRANSPORT=sse` (legacy): `GET <basePath>` + `POST <basePath>/messages?sessionId=...`
 
+Token delivery:
+
+- In HTTP/SSE modes, you can pass the user token via `Authorization: Bearer <FNS_TOKEN>` on MCP requests.
+- With this header, you can use user-auth tools without calling `fns_auth_set_token`.
+
 ## 5) Environment Variables
 
 - `FNS_BASE_URL` (default: `http://fast-note-sync-service:9000`)

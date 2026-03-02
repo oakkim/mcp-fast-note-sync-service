@@ -2,6 +2,8 @@
 
 `fast-note-sync-service` REST API를 MCP 툴로 노출하는 서버입니다.
 
+- English: [README.en.md](./README.en.md)
+
 - Transport: `stdio`(기본), `streamable-http`, `sse`(legacy)
 - 대상 서버: Docker로 실행 중인 `fast-note-sync-service`
 - Vault 정책: 특정 vault만 허용 또는 전체(`*`) 허용
@@ -167,6 +169,11 @@ npm run check       # typecheck + lint + test:run
 
 - `MCP_TRANSPORT=streamable-http` (권장): `<basePath>` 단일 엔드포인트(GET/POST/DELETE)
 - `MCP_TRANSPORT=sse` (legacy): `GET <basePath>` + `POST <basePath>/messages?sessionId=...`
+
+토큰 전달 방식:
+
+- HTTP/SSE 모드에서는 MCP 요청 헤더 `Authorization: Bearer <FNS_TOKEN>`로 사용자 토큰 전달 가능
+- 이 경우 `fns_auth_set_token` 호출 없이 바로 user-auth 툴 사용 가능
 
 ## 5) 환경변수
 

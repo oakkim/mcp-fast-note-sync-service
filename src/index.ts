@@ -122,6 +122,29 @@ function toRequestUrl(req: IncomingMessage): URL {
   return new URL(req.url ?? "/", `http://${host}`);
 }
 
+function extractAuthorizationToken(req: IncomingMessage): string | undefined {
+  const header = req.headers.authorization;
+  const value = Array.isArray(header) ? header[0] : header;
+  if (!value) {
+    return undefined;
+  }
+  const match = value.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    return undefined;
+  }
+  const token = match[1].trim();
+  return token || undefined;
+}
+
+function applyAuthorizationToken(req: IncomingMessage, runtime: ServerRuntime): void {
+  const token = extractAuthorizationToken(req);
+  if (!token) {
+    return;
+  }
+  runtime.client.updateToken(token);
+  runtime.cfg.token = token;
+}
+
 function writeJsonRpcError(res: ServerResponse, statusCode: number, message: string): void {
   if (res.headersSent) {
     return;
@@ -218,6 +241,7 @@ async function startStreamableHttp(
           writeJsonRpcError(res, 404, "Session not found");
           return;
         }
+        applyAuthorizationToken(req, existing.runtime);
         await existing.transport.handleRequest(req, res, parsedBody);
         return;
       }
@@ -232,6 +256,7 @@ async function startStreamableHttp(
       }
 
       const runtime = createRuntime(baseCfg);
+      applyAuthorizationToken(req, runtime);
       const createdSession: StreamableSession = {
         runtime,
         transport: new StreamableHTTPServerTransport({
@@ -301,6 +326,7 @@ async function startLegacySse(
 
       if (method === "GET" && pathname === basePath) {
         const runtime = createRuntime(baseCfg);
+        applyAuthorizationToken(req, runtime);
         const transport = new SSEServerTransport(messagePath, res);
         const session: SseSession = {
           runtime,
@@ -334,6 +360,7 @@ async function startLegacySse(
           return;
         }
 
+        applyAuthorizationToken(req, session.runtime);
         await session.transport.handlePostMessage(req, res, parsedBody);
         return;
       }
