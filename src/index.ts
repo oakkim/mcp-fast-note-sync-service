@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
+import { createRequire } from "node:module";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -11,6 +12,7 @@ import {
   ListToolsRequestSchema,
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
+import { applyBearerToken } from "./auth-header.js";
 import { type RuntimeConfig, loadConfig } from "./config.js";
 import { FastNoteSyncClient } from "./fns-client.js";
 import { type ServerState, callTool, getTools } from "./tools.js";
@@ -37,6 +39,9 @@ interface SseSession {
 }
 
 const INVALID_JSON = Symbol("invalid-json");
+const require = createRequire(import.meta.url);
+const packageJson = require("../package.json") as { version?: string };
+const SERVER_VERSION = packageJson.version ?? "0.1.2";
 
 function cloneConfig(cfg: RuntimeConfig): RuntimeConfig {
   return {
@@ -55,7 +60,7 @@ function createRuntime(baseCfg: RuntimeConfig): ServerRuntime {
   const server = new Server(
     {
       name: "mcp-fast-note-sync-service",
-      version: "0.1.1",
+      version: SERVER_VERSION,
     },
     {
       capabilities: {
@@ -122,27 +127,8 @@ function toRequestUrl(req: IncomingMessage): URL {
   return new URL(req.url ?? "/", `http://${host}`);
 }
 
-function extractAuthorizationToken(req: IncomingMessage): string | undefined {
-  const header = req.headers.authorization;
-  const value = Array.isArray(header) ? header[0] : header;
-  if (!value) {
-    return undefined;
-  }
-  const match = value.match(/^Bearer\s+(.+)$/i);
-  if (!match) {
-    return undefined;
-  }
-  const token = match[1].trim();
-  return token || undefined;
-}
-
 function applyAuthorizationToken(req: IncomingMessage, runtime: ServerRuntime): void {
-  const token = extractAuthorizationToken(req);
-  if (!token) {
-    return;
-  }
-  runtime.client.updateToken(token);
-  runtime.cfg.token = token;
+  applyBearerToken(req.headers.authorization, runtime.client, runtime.cfg);
 }
 
 function writeJsonRpcError(res: ServerResponse, statusCode: number, message: string): void {

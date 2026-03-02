@@ -13,13 +13,16 @@
     "start": "node dist/index.js",
     "start:streamable-http": "MCP_TRANSPORT=streamable-http node dist/index.js",
     "start:sse": "MCP_TRANSPORT=sse node dist/index.js",
+    "prepare": "husky",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm run test:run",
     "test": "vitest",
     "test:run": "vitest run",
-    "lint": "biome check .",
-    "format": "biome check --write .",
-    "format:check": "biome check ."
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "precommit:check": "npm run lint && npm run format:check && npm run test:coverage"
   },
   "engines": {
     "node": ">=20"
@@ -30,6 +33,8 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.18.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "husky": "^9.1.7",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^2.1.8"
