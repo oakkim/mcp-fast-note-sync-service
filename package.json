@@ -1,0 +1,35 @@
+{
+  "name": "mcp-fast-note-sync-service",
+  "version": "0.1.0",
+  "description": "MCP server adapter for fast-note-sync-service",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-fast-note-sync-service": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint && npm run test:run",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "format:check": "biome check ."
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.8"
+  }
+}

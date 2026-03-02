@@ -1,0 +1,13 @@
+services:
+  mcp-fast-note-sync-service:
+    build: .
+    image: mcp-fast-note-sync-service:latest
+    environment:
+      FNS_BASE_URL: "http://fast-note-sync-service:9000"
+      FNS_TOKEN: "${FNS_TOKEN}"
+      FNS_ALLOWED_VAULTS: "*"
+      FNS_DEFAULT_VAULT: ""
+      FNS_ENABLE_ADMIN_TOOLS: "false"
+    stdin_open: true
+    tty: true
+    restart: "no"
