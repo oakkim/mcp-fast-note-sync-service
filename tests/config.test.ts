@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isVaultAllowed, loadConfig } from "../src/config.js";
+import { applyConfigOverrides, isVaultAllowed, loadConfig } from "../src/config.js";
 
 const ENV_KEYS = [
   "FNS_BASE_URL",
@@ -61,5 +61,61 @@ describe("loadConfig", () => {
     expect(cfg.activeVault).toBe("DefaultVault");
     expect(cfg.enableAdminTools).toBe(true);
     expect(cfg.prettyDefault).toBe(true);
+  });
+
+  it("lets explicit overrides replace env vault policy", () => {
+    clearEnv();
+    vi.stubEnv("FNS_ALLOWED_VAULTS", "EnvVault");
+    vi.stubEnv("FNS_DEFAULT_VAULT", "EnvVault");
+    vi.stubEnv("FNS_ACTIVE_VAULT", "EnvVault");
+
+    const cfg = loadConfig({
+      allowedVaults: "CliVault",
+      defaultVault: "CliVault",
+      activeVault: "CliVault",
+    });
+
+    expect(cfg.allowAllVaults).toBe(false);
+    expect(Array.from(cfg.allowedVaults)).toEqual(["CliVault"]);
+    expect(cfg.defaultVault).toBe("CliVault");
+    expect(cfg.activeVault).toBe("CliVault");
+  });
+
+  it("normalizes invalid env defaults to a single allowed vault", () => {
+    clearEnv();
+    vi.stubEnv("FNS_ALLOWED_VAULTS", "Team");
+    vi.stubEnv("FNS_DEFAULT_VAULT", "Blocked");
+    vi.stubEnv("FNS_ACTIVE_VAULT", "Blocked");
+
+    const cfg = loadConfig();
+
+    expect(cfg.defaultVault).toBe("Team");
+    expect(cfg.activeVault).toBe("Team");
+  });
+});
+
+describe("applyConfigOverrides", () => {
+  it("re-scopes inherited defaults when the allowed vault list narrows", () => {
+    const scoped = applyConfigOverrides(
+      {
+        baseUrl: "http://localhost:9000",
+        token: undefined,
+        credentials: undefined,
+        password: undefined,
+        shareToken: undefined,
+        defaultVault: "General",
+        activeVault: "General",
+        allowAllVaults: true,
+        allowedVaults: new Set<string>(),
+        enableAdminTools: false,
+        prettyDefault: false,
+      },
+      { allowedVaults: "ProjectA" },
+    );
+
+    expect(scoped.allowAllVaults).toBe(false);
+    expect(Array.from(scoped.allowedVaults)).toEqual(["ProjectA"]);
+    expect(scoped.defaultVault).toBe("ProjectA");
+    expect(scoped.activeVault).toBe("ProjectA");
   });
 });

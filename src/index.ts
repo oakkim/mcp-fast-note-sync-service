@@ -13,7 +13,8 @@ import {
   isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 import { applyBearerToken } from "./auth-header.js";
-import { type RuntimeConfig, loadConfig } from "./config.js";
+import { getCliHelpText, parseCliArgs, parseVaultHeaders } from "./connection-overrides.js";
+import { applyConfigOverrides, type RuntimeConfig, loadConfig } from "./config.js";
 import { FastNoteSyncClient } from "./fns-client.js";
 import { type ServerState, callTool, getTools } from "./tools.js";
 
@@ -41,17 +42,13 @@ interface SseSession {
 const INVALID_JSON = Symbol("invalid-json");
 const require = createRequire(import.meta.url);
 const packageJson = require("../package.json") as { version?: string };
-const SERVER_VERSION = packageJson.version ?? "0.1.2";
+const SERVER_VERSION = packageJson.version ?? "0.1.3";
 
-function cloneConfig(cfg: RuntimeConfig): RuntimeConfig {
-  return {
-    ...cfg,
-    allowedVaults: new Set(cfg.allowedVaults),
-  };
-}
-
-function createRuntime(baseCfg: RuntimeConfig): ServerRuntime {
-  const cfg = cloneConfig(baseCfg);
+function createRuntime(
+  baseCfg: RuntimeConfig,
+  overrides: Parameters<typeof applyConfigOverrides>[1] = {},
+): ServerRuntime {
+  const cfg = applyConfigOverrides(baseCfg, overrides);
   const client = new FastNoteSyncClient(cfg);
   const state: ServerState = {
     activeVault: cfg.activeVault,
@@ -241,7 +238,17 @@ async function startStreamableHttp(
         return;
       }
 
-      const runtime = createRuntime(baseCfg);
+      let runtime: ServerRuntime;
+      try {
+        runtime = createRuntime(baseCfg, parseVaultHeaders(req.headers));
+      } catch (error) {
+        writeJsonRpcError(
+          res,
+          400,
+          error instanceof Error ? error.message : "Invalid vault scope headers",
+        );
+        return;
+      }
       applyAuthorizationToken(req, runtime);
       const createdSession: StreamableSession = {
         runtime,
@@ -311,7 +318,17 @@ async function startLegacySse(
       const method = (req.method ?? "GET").toUpperCase();
 
       if (method === "GET" && pathname === basePath) {
-        const runtime = createRuntime(baseCfg);
+        let runtime: ServerRuntime;
+        try {
+          runtime = createRuntime(baseCfg, parseVaultHeaders(req.headers));
+        } catch (error) {
+          writePlainError(
+            res,
+            400,
+            error instanceof Error ? error.message : "Invalid vault scope headers",
+          );
+          return;
+        }
         applyAuthorizationToken(req, runtime);
         const transport = new SSEServerTransport(messagePath, res);
         const session: SseSession = {
@@ -386,7 +403,13 @@ async function startLegacySse(
 }
 
 async function main(): Promise<void> {
-  const baseCfg = loadConfig();
+  const cli = parseCliArgs(process.argv.slice(2));
+  if (cli.help) {
+    console.log(getCliHelpText());
+    return;
+  }
+
+  const baseCfg = loadConfig(cli.configOverrides);
   const mode = parseTransportMode(process.env.MCP_TRANSPORT);
 
   if (mode === "stdio") {
@@ -406,4 +429,7 @@ async function main(): Promise<void> {
   await startLegacySse(baseCfg, host, port, basePath);
 }
 
-await main();
+await main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});

@@ -58,7 +58,7 @@ docker run --rm \
   -e FNS_BASE_URL=http://fast-note-sync-service:9000 \
   -e FNS_TOKEN=your_token \
   -e FNS_ALLOWED_VAULTS="*" \
-  kimneutral/mcp-fast-note-sync-service:v0.1.1
+  kimneutral/mcp-fast-note-sync-service:v0.1.3
 ```
 
 ## 3) GitHub Release + Docker Hub 자동 배포
@@ -119,8 +119,8 @@ npm run check       # typecheck + lint + test:run
         "--network", "your_network",
         "-e", "FNS_BASE_URL=http://fast-note-sync-service:9000",
         "-e", "FNS_TOKEN=your_token",
-        "-e", "FNS_ALLOWED_VAULTS=*",
-        "kimneutral/mcp-fast-note-sync-service:v0.1.1"
+        "kimneutral/mcp-fast-note-sync-service:v0.1.3",
+        "--vault=Team"
       ]
     }
   }
@@ -143,8 +143,9 @@ npm run check       # typecheck + lint + test:run
         "--network", "your_network",
         "-e", "FNS_BASE_URL=http://fast-note-sync-service:9000",
         "-e", "FNS_TOKEN=your_token",
-        "-e", "FNS_ALLOWED_VAULTS=*",
-        "mcp-fast-note-sync-service:latest"
+        "mcp-fast-note-sync-service:latest",
+        "--allowed-vaults=Team,Personal",
+        "--active-vault=Team"
       ]
     }
   }
@@ -159,7 +160,11 @@ npm run check       # typecheck + lint + test:run
 {
   "mcpServers": {
     "fast-note-sync-remote": {
-      "url": "https://your-domain.example.com/your-mcp-path"
+      "url": "https://your-domain.example.com/your-mcp-path",
+      "headers": {
+        "Authorization": "Bearer your_token",
+        "X-FNS-Vault": "Team"
+      }
     }
   }
 }
@@ -174,6 +179,15 @@ npm run check       # typecheck + lint + test:run
 
 - HTTP/SSE 모드에서는 MCP 요청 헤더 `Authorization: Bearer <FNS_TOKEN>`로 사용자 토큰 전달 가능
 - 이 경우 `fns_auth_set_token` 호출 없이 바로 user-auth 툴 사용 가능
+
+vault 범위 전달 방식:
+
+- `command`/Docker 연결에서는 이미지 이름 뒤 인자가 MCP 서버 프로세스로 전달됨
+- 단일 vault로 고정하려면 `--vault=<vault>`
+- 여러 vault만 허용하려면 `--allowed-vaults=vault1,vault2`
+- 기본/초기 선택을 따로 주려면 `--default-vault=<vault>`, `--active-vault=<vault>`
+- URL 연결에서는 `headers`로 `X-FNS-Vault`, `X-FNS-Allowed-Vaults`, `X-FNS-Default-Vault`, `X-FNS-Active-Vault` 전달 가능
+- CLI 인자와 헤더 값은 동일 항목의 `FNS_*` 환경변수보다 우선 적용됨
 
 ## 5) 환경변수
 
@@ -193,6 +207,8 @@ npm run check       # typecheck + lint + test:run
 
 ## 6) Vault 선택 방식
 
+- 연결 시점에 들어온 `--vault`/`X-FNS-Vault`는 해당 연결을 단일 vault로 고정
+- 연결 시점에 들어온 `--allowed-vaults`/`X-FNS-Allowed-Vaults`는 해당 연결의 허용 범위만 재정의
 - `fns_vault_set_active`로 active vault 선택
 - vault 필수 도구에서 `vault` 생략 시 `active -> default` 순으로 적용
 - `FNS_ALLOWED_VAULTS` 제약을 항상 검사

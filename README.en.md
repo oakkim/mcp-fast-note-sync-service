@@ -56,7 +56,7 @@ docker run --rm \
   -e FNS_BASE_URL=http://fast-note-sync-service:9000 \
   -e FNS_TOKEN=your_token \
   -e FNS_ALLOWED_VAULTS="*" \
-  kimneutral/mcp-fast-note-sync-service:v0.1.1
+  kimneutral/mcp-fast-note-sync-service:v0.1.3
 ```
 
 ## 3) GitHub Release + Docker Hub Auto Deployment
@@ -117,8 +117,8 @@ Use fixed tags (`vX.Y.Z`) rather than `latest` for reproducibility.
         "--network", "your_network",
         "-e", "FNS_BASE_URL=http://fast-note-sync-service:9000",
         "-e", "FNS_TOKEN=your_token",
-        "-e", "FNS_ALLOWED_VAULTS=*",
-        "kimneutral/mcp-fast-note-sync-service:v0.1.1"
+        "kimneutral/mcp-fast-note-sync-service:v0.1.3",
+        "--vault=Team"
       ]
     }
   }
@@ -141,8 +141,9 @@ If you build the image yourself, only replace the image name/tag:
         "--network", "your_network",
         "-e", "FNS_BASE_URL=http://fast-note-sync-service:9000",
         "-e", "FNS_TOKEN=your_token",
-        "-e", "FNS_ALLOWED_VAULTS=*",
-        "mcp-fast-note-sync-service:latest"
+        "mcp-fast-note-sync-service:latest",
+        "--allowed-vaults=Team,Personal",
+        "--active-vault=Team"
       ]
     }
   }
@@ -157,7 +158,11 @@ For clients that support URL-based MCP connections:
 {
   "mcpServers": {
     "fast-note-sync-remote": {
-      "url": "https://your-domain.example.com/your-mcp-path"
+      "url": "https://your-domain.example.com/your-mcp-path",
+      "headers": {
+        "Authorization": "Bearer your_token",
+        "X-FNS-Vault": "Team"
+      }
     }
   }
 }
@@ -172,6 +177,15 @@ Token delivery:
 
 - In HTTP/SSE modes, you can pass the user token via `Authorization: Bearer <FNS_TOKEN>` on MCP requests.
 - With this header, you can use user-auth tools without calling `fns_auth_set_token`.
+
+Vault scope delivery:
+
+- For `command`/Docker connections, arguments after the image name are passed to the MCP server process.
+- Use `--vault=<vault>` to lock a connection to a single vault.
+- Use `--allowed-vaults=vault1,vault2` to allow a subset of vaults.
+- Use `--default-vault=<vault>` and `--active-vault=<vault>` when you need separate fallback selection.
+- For URL-based connections, use `headers` with `X-FNS-Vault`, `X-FNS-Allowed-Vaults`, `X-FNS-Default-Vault`, and `X-FNS-Active-Vault`.
+- CLI args and headers override the matching `FNS_*` environment variables.
 
 ## 5) Environment Variables
 
@@ -191,6 +205,8 @@ Token delivery:
 
 ## 6) Vault Selection Behavior
 
+- `--vault` / `X-FNS-Vault` lock a single MCP connection to one vault
+- `--allowed-vaults` / `X-FNS-Allowed-Vaults` re-scope the allowed vault set for that connection
 - Set active vault via `fns_vault_set_active`
 - For tools requiring `vault`, if omitted: `active -> default`
 - `FNS_ALLOWED_VAULTS` restrictions are always enforced

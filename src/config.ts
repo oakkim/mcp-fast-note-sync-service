@@ -14,6 +14,12 @@ export interface RuntimeConfig {
   prettyDefault: boolean;
 }
 
+export interface RuntimeConfigOverrides {
+  allowedVaults?: string;
+  defaultVault?: string;
+  activeVault?: string;
+}
+
 function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
   if (value == null || value === "") {
     return defaultValue;
@@ -48,34 +54,112 @@ function parseAllowedVaults(input: string | undefined): {
   return { allowAllVaults: false, allowedVaults: new Set(values) };
 }
 
-export function loadConfig(): RuntimeConfig {
-  const baseUrl = (process.env.FNS_BASE_URL ?? "http://fast-note-sync-service:9000").replace(
-    /\/+$/,
-    "",
+function normalizeOptionalString(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function sanitizeVaultSelection(
+  defaultVault: string | undefined,
+  activeVault: string | undefined,
+  allowAllVaults: boolean,
+  allowedVaults: Set<string>,
+): {
+  defaultVault?: string;
+  activeVault?: string;
+} {
+  if (allowAllVaults) {
+    return {
+      defaultVault,
+      activeVault: activeVault ?? defaultVault,
+    };
+  }
+
+  const singleAllowedVault =
+    allowedVaults.size === 1 ? allowedVaults.values().next().value : undefined;
+  const nextDefault =
+    defaultVault && allowedVaults.has(defaultVault) ? defaultVault : singleAllowedVault;
+  const nextActiveBase = activeVault && allowedVaults.has(activeVault) ? activeVault : undefined;
+
+  return {
+    defaultVault: nextDefault,
+    activeVault: nextActiveBase ?? nextDefault,
+  };
+}
+
+function withVaultPolicy(
+  cfg: RuntimeConfig,
+  defaultVaultInput: string | undefined,
+  activeVaultInput: string | undefined,
+  allowedVaultsInput: string | undefined,
+): RuntimeConfig {
+  const parsedAllowed = parseAllowedVaults(allowedVaultsInput);
+  const normalized = sanitizeVaultSelection(
+    normalizeOptionalString(defaultVaultInput),
+    normalizeOptionalString(activeVaultInput),
+    parsedAllowed.allowAllVaults,
+    parsedAllowed.allowedVaults,
   );
-  const token = process.env.FNS_TOKEN?.trim() || undefined;
-  const credentials = process.env.FNS_CREDENTIALS?.trim() || undefined;
-  const password = process.env.FNS_PASSWORD?.trim() || undefined;
-  const shareToken = process.env.FNS_SHARE_TOKEN?.trim() || undefined;
-  const defaultVault = process.env.FNS_DEFAULT_VAULT?.trim() || undefined;
-  const activeVault = process.env.FNS_ACTIVE_VAULT?.trim() || defaultVault;
-  const parsedAllowed = parseAllowedVaults(process.env.FNS_ALLOWED_VAULTS);
+
+  return {
+    ...cfg,
+    defaultVault: normalized.defaultVault,
+    activeVault: normalized.activeVault,
+    allowAllVaults: parsedAllowed.allowAllVaults,
+    allowedVaults: parsedAllowed.allowedVaults,
+  };
+}
+
+export function loadConfig(overrides: RuntimeConfigOverrides = {}): RuntimeConfig {
+  const baseUrl = (
+    normalizeOptionalString(process.env.FNS_BASE_URL) ?? "http://fast-note-sync-service:9000"
+  ).replace(/\/+$/, "");
+  const token = normalizeOptionalString(process.env.FNS_TOKEN);
+  const credentials = normalizeOptionalString(process.env.FNS_CREDENTIALS);
+  const password = normalizeOptionalString(process.env.FNS_PASSWORD);
+  const shareToken = normalizeOptionalString(process.env.FNS_SHARE_TOKEN);
   const enableAdminTools = parseBoolean(process.env.FNS_ENABLE_ADMIN_TOOLS, false);
   const prettyDefault = parseBoolean(process.env.FNS_PRETTY_DEFAULT, false);
 
-  return {
+  const cfg: RuntimeConfig = {
     baseUrl,
     token,
     credentials,
     password,
     shareToken,
-    defaultVault,
-    activeVault,
-    allowAllVaults: parsedAllowed.allowAllVaults,
-    allowedVaults: parsedAllowed.allowedVaults,
+    defaultVault: undefined,
+    activeVault: undefined,
+    allowAllVaults: true,
+    allowedVaults: new Set<string>(),
     enableAdminTools,
     prettyDefault,
   };
+
+  return withVaultPolicy(
+    cfg,
+    overrides.defaultVault ?? process.env.FNS_DEFAULT_VAULT,
+    overrides.activeVault ?? process.env.FNS_ACTIVE_VAULT,
+    overrides.allowedVaults ?? process.env.FNS_ALLOWED_VAULTS,
+  );
+}
+
+export function applyConfigOverrides(
+  baseCfg: RuntimeConfig,
+  overrides: RuntimeConfigOverrides = {},
+): RuntimeConfig {
+  return withVaultPolicy(
+    {
+      ...baseCfg,
+      allowedVaults: new Set(baseCfg.allowedVaults),
+    },
+    overrides.defaultVault ?? baseCfg.defaultVault,
+    overrides.activeVault ?? baseCfg.activeVault,
+    overrides.allowedVaults === undefined
+      ? baseCfg.allowAllVaults
+        ? "*"
+        : Array.from(baseCfg.allowedVaults).join(",")
+      : overrides.allowedVaults,
+  );
 }
 
 export function isVaultAllowed(cfg: RuntimeConfig, vault: string): boolean {
