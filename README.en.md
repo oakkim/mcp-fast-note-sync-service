@@ -56,7 +56,7 @@ docker run --rm \
   -e FNS_BASE_URL=http://fast-note-sync-service:9000 \
   -e FNS_TOKEN=your_token \
   -e FNS_ALLOWED_VAULTS="*" \
-  kimneutral/mcp-fast-note-sync-service:v0.1.3
+  kimneutral/mcp-fast-note-sync-service:v0.1.4
 ```
 
 ## 3) GitHub Release + Docker Hub Auto Deployment
@@ -117,7 +117,7 @@ Use fixed tags (`vX.Y.Z`) rather than `latest` for reproducibility.
         "--network", "your_network",
         "-e", "FNS_BASE_URL=http://fast-note-sync-service:9000",
         "-e", "FNS_TOKEN=your_token",
-        "kimneutral/mcp-fast-note-sync-service:v0.1.3",
+        "kimneutral/mcp-fast-note-sync-service:v0.1.4",
         "--vault=Team"
       ]
     }

@@ -42,7 +42,7 @@ interface SseSession {
 const INVALID_JSON = Symbol("invalid-json");
 const require = createRequire(import.meta.url);
 const packageJson = require("../package.json") as { version?: string };
-const SERVER_VERSION = packageJson.version ?? "0.1.3";
+const SERVER_VERSION = packageJson.version ?? "0.1.4";
 
 function createRuntime(
   baseCfg: RuntimeConfig,
